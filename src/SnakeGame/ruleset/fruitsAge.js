@@ -1,5 +1,8 @@
-export default ({ fruits }, { fruitExpirationAge }) => ({
-  fruits: fruits
-    .map(f => f.cloneWith({ age: f.age + 1, key: f.key }))
-    .filter(f => f.age <= fruitExpirationAge),
+export default ({
+  fruits,
+  time,
+}, {
+  fruitExpirationDelay: delay,
+}) => ({
+  fruits: fruits.filter(f => time - f.createdAt <= delay),
 });

@@ -5,74 +5,108 @@ import Snake from './Snake';
 import SnakeObject from './SnakeObject';
 import * as ruleset from './ruleset/';
 
-const tickDelay = 150;
-
 export default class SnakeGame extends React.Component {
   static defaultProps = {
     width: 640,
     height: 480,
     backgroundColor: 'white',
-    newFruitProbability: 0.2,
+    newFruitDelay: 200,
+    newFruitProbability: 0.35,
     newFruitSize: 40,
-    fruitExpirationAge: 30,
+    fruitExpirationDelay: 10 * 1000,
+    snakeSpeed: 0.1,
+    growthDelay: 150,
   };
 
   constructor(props) {
     super(props);
+
+    const direction = 90;
     this.state = {
       segments: [
         new SnakeObject({
           x: this.props.width / 2,
           y: this.props.height / 2,
           r: 10,
+          offset: 0,
+          trailDirection: direction + 180,
         }),
       ],
+      direction,
       fruits: [],
-      direction: 90,
+      trail: [],
       running: true,
-      ticks: 0,
-      growth: 5,
+      time: 0,
+      deltaTime: 0,
+      growth: 8,
+      lastGrowthAt: 0,
+      lastFruitAt: 0,
     };
   }
 
   componentDidMount() {
     document.addEventListener('keydown', this._onKeyDown);
-    this._intervalId = setInterval(() => {
+
+    let scheduleNextTick;
+    const tick = (time) => {
       const { noCrossing, ...rest } = ruleset;
-      [noCrossing, ...Object.values(rest)].forEach((rule) => {
-        if (this.state.running) {
-          this.setState(rule);
-        }
-      });
-    }, tickDelay);
+      this.setState(
+        (state, props) => [
+          ({ time: prevTime }) => ({
+            time,
+            deltaTime: time - prevTime,
+          }),
+          noCrossing,
+          ...Object.values(rest),
+        ].reduce(
+          (s, rule) => ({
+            ...s,
+            ...(state.running && rule(s, props)),
+          }),
+          state,
+        ),
+        scheduleNextTick,
+      );
+    };
+    scheduleNextTick = () => {
+      this._requestId = requestAnimationFrame(tick);
+    };
+    scheduleNextTick();
   }
 
   componentWillUnmount() {
-    clearInterval(this._intervalId);
+    cancelAnimationFrame(this._requestId);
     document.removeEventListener('keydown', this._onKeyDown);
   }
 
-  _onKeyDown = ({ keyCode }) => this.setState(() => {
-    const direction = {
-      37: 270, // left
-      38: 0, // up
-      39: 90, // right
-      40: 180, // down
-    }[keyCode];
-    return {
-      ...(direction != null && { direction }),
-    };
+  _onKeyDown = ({ keyCode }) => this.setState(({ direction }) => {
+    switch (keyCode) {
+      case 37: /* left */
+        return {
+          direction: direction - 21,
+        };
+
+      case 39: /* right */
+        return {
+          direction: direction + 21,
+        };
+
+      default:
+        return null;
+    }
   });
 
   render() {
     const {
       props: { width, height, backgroundColor },
-      state: { fruits, segments, ticks },
+      state: { fruits, segments, time },
     } = this;
-    const time = (ticks * tickDelay / 1000).toFixed(2);
+    const sec = (time / 1000).toFixed(2);
     return (
       <svg style={{ width, height, backgroundColor }}>
-        <text y={20}>Score: {time} s and {segments.length} segments</text>
+        <text style={{ fontFamily: 'monospace' }} y={20}>
+          Score: {sec} s and {segments.length} segments
+        </text>
         {fruits.map(fruit => <Fruit {...fruit} />)}
         <Snake {...{ segments }} />
       </svg>
