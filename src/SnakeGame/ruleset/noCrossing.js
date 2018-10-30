@@ -1,3 +1,3 @@
 export default ({ segments }) => ({
-  running: !segments.slice(5).some(s => s.collidesWith(segments[0])),
+  running: !segments.slice(2).some(s => s.collidesWith(segments[0])),
 });
