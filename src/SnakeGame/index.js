@@ -5,6 +5,17 @@ import Snake from './Snake';
 import SnakeObject from './SnakeObject';
 import * as ruleset from './ruleset/';
 
+const throttle = (fn, timeout) => {
+  let wait = false;
+  return (...args) => {
+    if (!wait) {
+      fn(...args);
+      wait = true;
+      setTimeout(() => wait = false, timeout);
+    }
+  }
+}
+
 export default class SnakeGame extends React.Component {
   static defaultProps = {
     width: 640,
@@ -42,6 +53,7 @@ export default class SnakeGame extends React.Component {
       lastGrowthAt: 0,
       lastFruitAt: 0,
     };
+    this._onKeyDown = throttle(this._onKeyDown, 100);
   }
 
   componentDidMount() {
